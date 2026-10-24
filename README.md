@@ -1,58 +1,23 @@
-# ESCALATION ROOM — AI 피드백 논문 리뷰 웹앱
+# ESCALATION ROOM — GitHub Pages + Supabase
 
-온라인 박사과정 논문 리뷰용 **실시간 멀티플레이 웹앱**입니다. Phung et al. (2026), *Closing the Loop: An Instructor-in-the-Loop AI Assistance System for Supporting Student Help-Seeking in Programming Education*의 연구 주제를 기반으로 기획한 교육용 가상 사례입니다. 게임의 학생 4명은 논문에 등장하는 실제 연구 참여자가 아닙니다.
+이 버전은 Render나 Node.js 서버 없이 **GitHub Pages(화면)**와 **Supabase Edge Function + PostgreSQL(데이터)**로 구성됩니다.
 
-## 포함된 기능
+## 설정 순서
+1. Supabase 프로젝트의 **SQL Editor**에서 `supabase/schema.sql` 전체 실행
+2. Supabase **Edge Functions > Secrets**에서 `ADMIN_PASSWORD` 설정 (원하는 강력한 교수자 암호)
+3. **Edge Functions > Deploy a new function > Via Editor**에서 함수 이름 `escalation-api`, `supabase/edge-function.ts` 코드를 붙여넣고 배포. 이 함수에서는 **Verify JWT 비활성화**. 함수 자체에서 관리자/참가자 토큰 권한을 검사합니다.
+4. Supabase의 Project URL에서 프로젝트 ID를 복사해 `config.js`의 `YOUR_PROJECT_REF`를 바꿈 (DB 비밀번호와 service_role 키는 브라우저에 넣지 않습니다!)
+5. GitHub Pages 저장소 최상위에 `index.html`, `app.js`, `config.js`, `assets` 폴더를 올리기. **`supabase` 폴더는 웹사이트에 업로드하지 않아도 됨**
+6. GitHub 저장소 > Settings > Pages > Deploy from a branch > main, /(root) > Save
+7. 공개 주소에서 관리자 수업 생성 및 참가자 입장 테스트
 
-- **교수자 모드:** 비밀번호 인증, 6자리 룸 생성, THINK ROOM 문항 5개 전환, 실시간 집계, ESCALATION 단계 전환, 학습자별 선택 및 이유 확인, '최고' 투표 결과, 대표 발표자 4명, 마무리 슬라이드.
-- **참여자 모드:** 코드로 입장, 공개된 THINK ROOM 객관식 질문에 응답 및 변경, 마지막 학생 4명 선택, 확신도·이유 제출, 판단 기준 직접 확인, 다른 교사의 의견 열람, 학생별 최고 1표 투표(자기투표 불가).
-- **실시간:** Socket.IO를 통한 서버 기반 동기화. 전체 집계 및 결과 화면은 관리자 소켓에만 전송됩니다.
-- **시각:** 4명 학생 캐릭터 PNG 이미지와 모바일·PC 반응형 UI.
+기존 `server.js`, `package.json`은 이 버전에서 사용하지 않습니다.
 
-## 실행법
-
-Node.js 18 이상이 필요합니다. 프로젝트 폴더에서:
-
-```bash
-npm install
-```
-
-macOS/Linux:
-```bash
-ADMIN_PASSWORD='여기에_강력한_비밀번호' npm start
-```
-
-Windows PowerShell:
-```powershell
-$env:ADMIN_PASSWORD='여기에_강력한_비밀번호'
-npm start
-```
-
-브라우저에서 `http://localhost:3000`에 접속합니다.
-
-1. 발표자: **교수자 모드 → 관리자 비밀번호 → 새 수업 만들기**를 선택합니다.
-2. 발급된 6자리 룸 코드를 참여자에게 공유합니다.
-3. 다른 참여자들은 서버 주소와 룸 코드로 입장합니다.
-4. 발표 초기 THINK ROOM 문항을 선택하여 응답을 받고 **THINK 결과**에서 확인합니다.
-5. 발표 마지막에 **학생 선택 및 이유 제출 시작**을 눌러 미션을 엽니다.
-6. 충분한 응답을 받은 후 **의견 게시판 · 최고 투표 시작**을 누릅니다.
-7. 참가자에게는 의견만, 교수자에게는 **모두의 선택 결과**, **대표 발표**, **최종 정리**가 나타납니다.
-
-## 실제 온라인 수업에 배포
-
-로컬 PC의 `localhost` 주소는 다른 선생님들이 직접 접속할 수 없습니다. Render, Railway, 또는 Node.js/Socket.IO를 지원하는 웹 서버에 이 프로젝트를 올려야 합니다.
-
-- 시작 명령: `npm start`
-- 환경변수: `ADMIN_PASSWORD` (반드시 지정)
-- 포트: 호스팅이 제공하는 `PORT` 사용
-- 서버 데이터: `sessions.json` 저장 (애플리케이션 시작 후 자동 생성). 서버가 재시작하거나 임시 디스크가 초기화될 수 있는 호스팅에서는 **영구 디스크 볼륨**을 추가하세요.
-- HTTPS 사용, 관리자 비밀번호를 참여자에게 노출하지 않기
-- **한 서버 인스턴스 기준**이며, 여러 인스턴스 분산 운영용 Redis 어댑터는 포함되지 않았습니다.
-
-## 참고 사항
-
-- Node 모듈(`node_modules`)은 ZIP에 포함하지 않습니다. `npm install` 필요.
-- 진행 중 서버를 재시작하면 화면 연결은 다시 수립되지만, 영구 디스크가 없다면 기록이 유지되지 않을 수 있습니다.
-- 닉네임과 선택 이유를 서버에 저장하므로 실제 수업 전 참가자에게 수집 사실을 알리세요.
-- '판단 기준 확인'은 이용자가 직접 태그로 확정합니다(문장 자동분류는 구현하지 않았습니다).
-- 연구 결과를 검증하는 실험 도구가 아니라 교육 토론 게임입니다.
+## 설계 및 안전 주의사항
+- Supabase 테이블은 RLS 활성화 상태이며 브라우저에서 직접 접근하지 않습니다. Edge Function만 service-role 자격증명으로 읽고 씁니다.
+- 반드시 Supabase Edge Function의 **ADMIN_PASSWORD**를 별도 설정하세요. 데이터베이스 암호와 별개입니다.
+- Supabase의 데이터베이스 연결 문자열, database password, secret/service_role key는 GitHub에 절대 올리지 마세요.
+- 기본 화면은 3초마다 동기화(polling)합니다. Socket.IO의 지속 연결 대신 브라우저가 서버리스 API를 주기적으로 조회합니다.
+- 이 프로젝트는 교육용 시제품이며 실제 수업 전 반드시 여러 브라우저에서 테스트하세요. 짧은 기간에 다수 참가자가 동시에 투표할 경우 부하/요금 제한이 있을 수 있습니다.
+- 비밀번호를 가진 교수자가 수업을 생성합니다. 학생은 수업 코드 및 본인 기기에 보존된 참가자 토큰으로 본인 응답을 수정합니다.
+- GitHub Pages에서 공개 주소가 생성되기 전에는 웹페이지를 파일로 더블클릭해 열어도 CORS/보안 설정에 따라 작동하지 않을 수 있습니다.
